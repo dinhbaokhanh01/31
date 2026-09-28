@@ -1,0 +1,171 @@
+Dưới đây là nội dung tệp README.md hoàn chỉnh tổng hợp toàn bộ bài lab Từ điển Anh - Việt (bao gồm cấu trúc, mã nguồn chuẩn Jakarta EE và hướng dẫn đóng gói/triển khai). Bạn chỉ cần sao chép đoạn mã bên dưới và lưu thành file README.md trong thư mục gốc của dự án để đẩy (push) lên GitHub:
+
+Markdown
+# Ứng dụng Từ điển Anh - Việt (JSP & Jakarta EE)
+
+Dự án Java Web cơ bản hướng dẫn tạo và xử lý tra cứu dữ liệu từ điển bằng JSP trên Tomcat 10+, ứng dụng Maven Webapp, Jakarta Servlet API, và sử dụng Scriptlet (`<% %>`) / Expression (`<%= %>`) trong JSP.
+
+---
+
+## 📂 Cấu trúc thư mục dự án
+
+```text
+jsp-pure-dictionary/
+├── pom.xml                                # File cấu hình khai báo thư viện quản lý bởi Maven
+└── src/
+    └── main/
+        └── webapp/                        # Thư mục chứa giao diện và logic JSP
+            ├── index.jsp                  # Trang chủ chứa Form nhập từ khóa tra cứu
+            ├── dictionary.jsp             # Trang xử lý tra cứu và hiển thị nghĩa bằng mã Java nhúng
+            └── WEB-INF/                   # Thư mục bảo mật cấu hình của ứng dụng Web
+                └── web.xml                # File cấu hình ứng dụng Web (Jakarta Servlet 6.0)
+📄 Mã nguồn chi tiết
+1. pom.xml
+XML
+<project xmlns="[http://maven.apache.org/POM/4.0.0](http://maven.apache.org/POM/4.0.0)" 
+         xmlns:xsi="[http://www.w3.org/2001/XMLSchema-instance](http://www.w3.org/2001/XMLSchema-instance)" 
+         xsi:schemaLocation="[http://maven.apache.org/POM/4.0.0](http://maven.apache.org/POM/4.0.0) [http://maven.apache.org/maven-v4_0_0.xsd](http://maven.apache.org/maven-v4_0_0.xsd)">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.codegym</groupId>
+    <artifactId>jsp-pure-dictionary</artifactId>
+    <packaging>war</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>JSP Pure Dictionary Webapp</name>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>jakarta.servlet.jsp</groupId>
+            <artifactId>jakarta.servlet.jsp-api</artifactId>
+            <version>3.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>jsp-pure-dictionary</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+2. src/main/webapp/index.jsp
+Java
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Từ điển Anh - Việt</title>
+        <style>
+            body { font-family: 'Arial', sans-serif; display: flex; justify-content: center; margin-top: 100px; background-color: #f8fafc; }
+            .dictionary-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; width: 350px; }
+            input { padding: 12px; margin: 15px 0; width: 90%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+            button { background-color: #1b2a7a; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; width: 90%; font-weight: bold; font-size: 16px; margin-top: 10px;}
+            button:hover { background-color: #121c54; }
+        </style>
+    </head>
+    <body>
+        <div class="dictionary-container">
+            <h2 style="color: #1b2a7a;">Từ Điển Anh - Việt</h2>
+            <!-- Form gửi dữ liệu bằng phương thức POST tới trang dictionary.jsp -->
+            <form action="dictionary.jsp" method="POST">
+                <input type="text" name="search" placeholder="Nhập từ tiếng Anh..." required autofocus />
+                <button type="submit">Tìm kiếm</button>
+            </form>
+        </div>
+    </body>
+</html>
+3. src/main/webapp/dictionary.jsp
+Java
+<%@page import="java.util.HashMap"%>
+<%@page import="java.util.Map"%>
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Kết quả tra cứu</title>
+        <style>
+            body { font-family: 'Arial', sans-serif; display: flex; justify-content: center; margin-top: 100px; background-color: #f8fafc; }
+            .result-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; width: 400px; }
+            .back-btn { text-decoration: none; padding: 10px 20px; background-color: #1b2a7a; color: white; border-radius: 4px; display: inline-block; margin-top: 20px;}
+        </style>
+    </head>
+    <body>
+        <div class="result-container">
+            <h2 style="color: #1b2a7a;">KẾT QUẢ TRA CỨU</h2>
+            
+            <%-- Mở thẻ Scriptlet để khởi tạo từ điển và xử lý logic --%>
+            <%
+                request.setCharacterEncoding("UTF-8");
+                String searchWord = request.getParameter("search");
+                
+                // Khởi tạo Map lưu trữ từ vựng làm Database giả lập
+                Map<String, String> dic = new HashMap<>();
+                dic.put("hello", "Xin chào");
+                dic.put("how", "Thế nào");
+                dic.put("book", "Quyển sách");
+                dic.put("computer", "Máy tính");
+                dic.put("student", "Sinh viên");
+                
+                String result = null;
+                if (searchWord != null && !searchWord.trim().isEmpty()) {
+                    result = dic.get(searchWord.trim().toLowerCase());
+                }
+            %>
+            
+            <%-- Hiển thị kết quả bằng thẻ Expression hoặc đưa ra thông báo không tìm thấy --%>
+            <%
+                if (result != null) {
+            %>
+                <p style="font-size: 18px; color: #555;">Từ cần tra: <b style="color: #1b2a7a;"><%= searchWord %></b></p>
+                <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <h3 style="color: #27ae60; font-size: 24px; margin: 0;">Nghĩa là: <%= result %></h3>
+                </div>
+            <%
+                } else {
+            %>
+                <div style="background-color: #ffebee; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <h3 style="color: #c0392b; margin: 0;">Không tìm thấy!</h3>
+                    <p style="color: #555;">Từ khóa <b style="color: #c0392b;"><%= searchWord %></b> không có trong từ điển.</p>
+                </div>
+            <%
+                }
+            %>
+            
+            <a href="index.jsp" class="back-btn">Quay lại trang chủ</a>
+        </div>
+    </body>
+</html>
+4. src/main/webapp/WEB-INF/web.xml
+XML
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="[https://jakarta.ee/xml/ns/jakartaee](https://jakarta.ee/xml/ns/jakartaee)"
+         xmlns:xsi="[http://www.w3.org/2001/XMLSchema-instance](http://www.w3.org/2001/XMLSchema-instance)"
+         xsi:schemaLocation="[https://jakarta.ee/xml/ns/jakartaee](https://jakarta.ee/xml/ns/jakartaee) [https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd](https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd)"
+         version="6.0">
+    
+    <display-name>JSP Pure Dictionary</display-name>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+</web-app>
